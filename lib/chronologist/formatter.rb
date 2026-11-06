@@ -25,12 +25,13 @@ module Chronologist
 
     def stamp(time, zone)
       t =
+        # 未指定は UTC 固定。Rails の config.time_zone やサーバの TZ に引きずられないようにする
         if zone.nil?
-          defined?(::Time.zone_default) && ::Time.zone_default ? ::Time.zone_default.at(time) : time
+          time.getutc
         elsif zone.to_s.match?(/\A[+-]\d\d:\d\d\z/)
           time.getlocal(zone)
         else
-          ActiveSupport::TimeZone[zone].at(time)
+          (ActiveSupport::TimeZone[zone] || raise(ArgumentError, "unknown time_zone: #{zone}")).at(time)
         end
       t.iso8601(6)
     end

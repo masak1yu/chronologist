@@ -9,6 +9,7 @@ begin
   require "active_support"
   require "active_support/tagged_logging"
   require "active_support/logger"
+  require "active_support/time"
 rescue LoadError
 end
 require "msgpack"
@@ -54,6 +55,20 @@ class ChronologistTest < Minitest::Test
     assert_equal "2024-01-02T12:04:05.000000+09:00", h["timestamp"]
     assert_equal "INFO", h["level"]
     assert_equal "hi", h["message"]
+  end
+
+  def test_default_time_zone_is_utc_even_if_rails_zone_or_tz_set
+    Chronologist.config.time_zone = nil
+    Time.zone_default = ActiveSupport::TimeZone["Tokyo"] if defined?(ActiveSupport::TimeZone)
+    assert_equal "2024-01-02T03:04:05.000000Z", parse("x")["timestamp"]
+  ensure
+    Time.zone_default = nil if Time.respond_to?(:zone_default=)
+  end
+
+  def test_iana_time_zone
+    skip "activesupport not available" unless defined?(ActiveSupport::TimeZone)
+    Chronologist.config.time_zone = "Asia/Tokyo"
+    assert_equal "2024-01-02T12:04:05.000000+09:00", parse("x")["timestamp"]
   end
 
   def test_hash_message_is_merged
