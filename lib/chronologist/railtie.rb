@@ -55,6 +55,7 @@ module Chronologist
     end
 
     config.after_initialize do
+      Chronologist.validate! # config/initializers で後から変えられた場合もここで検出
       RequestSummary.install if Chronologist.config.request_summary
       Chronologist.config.loggers.each do |l|
         logger = l.call

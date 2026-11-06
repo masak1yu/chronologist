@@ -157,9 +157,20 @@ class ChronologistTest < Minitest::Test
     refute h.key?("trace_id")
   end
 
-  def test_unknown_enricher_symbol_raises
-    Chronologist.config.enrichers = [:nope]
-    assert_raises(ArgumentError) { fmt("x") }
+  def test_validate_rejects_bad_config
+    [[:format, :xml], [:output, :file], [:time_zone, "Mars/Base"], [:enrichers, [:nope]],
+     [:fields, []], [:loggers, [Object.new]]].each do |key, val|
+      Chronologist.instance_variable_set(:@config, nil)
+      Chronologist.config[key] = val
+      assert_raises(ArgumentError, key.to_s) { Chronologist.formatter }
+    end
+  end
+
+  def test_validate_accepts_defaults_and_valid_values
+    assert Chronologist.validate!
+    Chronologist.config.time_zone = "Asia/Tokyo"
+    Chronologist.config.enrichers = [:datadog, -> { {} }]
+    assert Chronologist.validate!
   end
 
   def test_custom_enricher_and_failure_is_isolated

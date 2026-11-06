@@ -15,6 +15,7 @@ config.chronologist.fields = { app: "web", host: -> { Socket.gethostname } }
 config.chronologist.loggers = [-> { Sidekiq.logger }]
 ```
 
+- 設定値は起動時に検証し、誤りは `ArgumentError` で起動を止める（`Chronologist.validate!`）
 - `request_summary`: Started/Processing/Rendered/Completed を消し、`method path format controller action status duration view db error` の 1 行にする
 - `output :auto`: ECS 上または `RAILS_LOG_TO_STDOUT` があれば stdout に出力
 - `Chronologist.with(user_id: 1) { ... }`: ブロック内の全行にフィールド追加
