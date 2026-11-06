@@ -55,10 +55,16 @@ class ChronologistTest < Minitest::Test
     assert_equal "hi", h["message"]
   end
 
-  def test_default_time_zone_is_utc_even_if_rails_zone_or_tz_set
+  def test_default_time_zone_is_utc_regardless_of_server_tz
     Chronologist.config.time_zone = nil
-    Time.zone_default = ActiveSupport::TimeZone["Tokyo"] if defined?(ActiveSupport::TimeZone)
     assert_equal "2024-01-02T03:04:05.000000Z", parse("x")["timestamp"]
+  end
+
+  def test_default_time_zone_follows_rails_time_zone
+    skip "activesupport not available" unless defined?(ActiveSupport::TimeZone)
+    Chronologist.config.time_zone = nil
+    Time.zone_default = ActiveSupport::TimeZone["Tokyo"]
+    assert_equal "2024-01-02T12:04:05.000000+09:00", parse("x")["timestamp"]
   ensure
     Time.zone_default = nil if Time.respond_to?(:zone_default=)
   end

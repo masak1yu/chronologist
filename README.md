@@ -9,7 +9,7 @@ Rails ログの書式・タイムゾーン・トレース相関を一箇所で�
 ```ruby
 config.chronologist.format = :jsonl           # :jsonl(1行1JSON) | :json(整形) | :text | :msgpack | ->(hash) { String }
 config.chronologist.request_summary = true    # lograge 相当: リクエストログを 1 行に集約
-config.chronologist.time_zone = "Asia/Tokyo"  # 未指定なら UTC。IANA名 / Rails名("Tokyo") / "+09:00"
+config.chronologist.time_zone = "Asia/Tokyo"  # 未指定なら Rails の config.time_zone、無ければ UTC。IANA名 / Rails名("Tokyo") / "+09:00"
 config.chronologist.output = :auto            # :auto | :stdout | :default
 config.chronologist.fields = { app: "web", host: -> { Socket.gethostname } }
 config.chronologist.loggers = [-> { Sidekiq.logger }]

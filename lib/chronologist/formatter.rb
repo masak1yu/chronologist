@@ -25,9 +25,9 @@ module Chronologist
 
     def stamp(time, zone)
       t =
-        # 未指定は UTC 固定。Rails の config.time_zone やサーバの TZ に引きずられないようにする
+        # 未指定は Rails の config.time_zone、無ければ UTC。サーバの TZ には引きずられないようにする
         if zone.nil?
-          time.getutc
+          defined?(::Time.zone_default) && ::Time.zone_default ? ::Time.zone_default.at(time) : time.getutc
         elsif zone.to_s.match?(/\A[+-]\d\d:\d\d\z/)
           time.getlocal(zone)
         else
