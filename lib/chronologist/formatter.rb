@@ -11,7 +11,7 @@ module Chronologist
       h.merge!(Thread.current[:chronologist_context] || {})
       h.merge!(cfg.fields.to_h { |k, v| [k.to_s, v.respond_to?(:call) ? v.call : v] })
       # dd などのネストは enricher 間で 1 段だけマージ（後勝ち）
-      cfg.enrichers.each { |e| h.merge!(enrich(e)) { |_, a, b| a.is_a?(Hash) && b.is_a?(Hash) ? a.merge(b) : b } }
+      cfg.enrichers.each { |e| h.merge!(enrich(e.is_a?(Symbol) ? Enricher[e] : e)) { |_, a, b| a.is_a?(Hash) && b.is_a?(Hash) ? a.merge(b) : b } }
       render(h, cfg.format)
     end
 

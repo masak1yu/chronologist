@@ -22,17 +22,16 @@ config.chronologist.loggers = [-> { Sidekiq.logger }]
 
 ## enrichers（任意）
 
-各行に付加するフィールドを `call` → Hash のオブジェクトで登録する。既定は空で、特定ベンダーには依存しない。
+各行に付加するフィールド。設定に書くだけで有効になり（require 不要）、既定は空。
 
 ```ruby
-require "chronologist/enricher/datadog"
-require "chronologist/enricher/opentelemetry"
-
 config.chronologist.enrichers = [
-  Chronologist::Enricher::Datadog.new,                          # dd.trace_id 等 + DD_* から service/ddsource/ddtags
-  Chronologist::Enricher::OpenTelemetry.new(datadog_ids: true), # trace_id/span_id/trace_flags（+ Datadog 照合用 dd.*）
-  -> { { "region" => ENV["AWS_REGION"] } },                     # 自前の enricher
+  :datadog,        # dd.trace_id 等 + DD_* から service/ddsource/ddtags
+  :opentelemetry,  # trace_id/span_id/trace_flags
+  -> { { "region" => ENV["AWS_REGION"] } },  # 自前: call → Hash
 ]
+# OTel トレースを Datadog でログと照合する場合
+config.chronologist.enrichers = [:datadog, Chronologist::Enricher::OpenTelemetry.new(datadog_ids: true)]
 ```
 
 - 後ろの enricher が勝つ。`dd` のようなネストは 1 段だけマージ

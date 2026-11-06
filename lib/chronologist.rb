@@ -5,6 +5,17 @@ require_relative "chronologist/formatter"
 module Chronologist
   VERSION = "0.1.0"
 
+  # 使わない環境では読み込まれないよう autoload。enrichers に :datadog 等のシンボルで指定できる
+  module Enricher
+    autoload :Datadog, "chronologist/enricher/datadog"
+    autoload :OpenTelemetry, "chronologist/enricher/opentelemetry"
+    NAMES = { datadog: :Datadog, opentelemetry: :OpenTelemetry }.freeze
+
+    def self.[](name)
+      (@cache ||= {})[name] ||= const_get(NAMES.fetch(name) { raise ArgumentError, "unknown enricher: #{name}" }).new
+    end
+  end
+
   Config = Struct.new(:format, :time_zone, :output, :enrichers, :fields, :loggers, :request_summary) do
     def initialize(*)
       super(:jsonl, nil, :auto, [], {}, [], false)

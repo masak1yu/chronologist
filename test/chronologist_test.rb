@@ -2,8 +2,6 @@ require "minitest/autorun"
 require "stringio"
 # activesupport より先に読んでもタグ対応が効くことを確認するため先頭で require
 require "chronologist"
-require "chronologist/enricher/datadog"
-require "chronologist/enricher/opentelemetry"
 
 begin
   require "active_support"
@@ -142,7 +140,7 @@ class ChronologistTest < Minitest::Test
     assert_equal "web", h["app"]
   end
 
-  def dd! = Chronologist.config.enrichers = [Chronologist::Enricher::Datadog.new]
+  def dd! = Chronologist.config.enrichers = [:datadog]
 
   def test_no_vendor_fields_by_default
     stub_datadog
@@ -151,6 +149,11 @@ class ChronologistTest < Minitest::Test
     h = parse("x")
     refute h.key?("dd")
     refute h.key?("trace_id")
+  end
+
+  def test_unknown_enricher_symbol_raises
+    Chronologist.config.enrichers = [:nope]
+    assert_raises(ArgumentError) { fmt("x") }
   end
 
   def test_custom_enricher_and_failure_is_isolated
@@ -176,7 +179,7 @@ class ChronologistTest < Minitest::Test
 
   def test_otel_fields
     stub_otel
-    Chronologist.config.enrichers = [Chronologist::Enricher::OpenTelemetry.new]
+    Chronologist.config.enrichers = [:opentelemetry]
     h = parse("x")
     assert_equal "00f067aa0ba902b7", h["span_id"]
     refute h.key?("dd")
