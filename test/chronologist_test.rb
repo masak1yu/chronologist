@@ -2,6 +2,8 @@ require "minitest/autorun"
 require "stringio"
 # activesupport より先に読んでもタグ対応が効くことを確認するため先頭で require
 require "chronologist"
+require "chronologist/enricher/datadog"
+require "chronologist/enricher/opentelemetry"
 
 begin
   require "active_support"
@@ -85,6 +87,7 @@ class ChronologistTest < Minitest::Test
 
   def test_text_format_has_offset_and_flattened_keys
     stub_datadog
+    dd!
     Chronologist.config.format = :text
     out = fmt("hi")
     assert_match(/\A2024-01-02T12:04:05\.000000\+09:00 INFO  hi /, out)
@@ -124,8 +127,25 @@ class ChronologistTest < Minitest::Test
     assert_equal "web", h["app"]
   end
 
+  def dd! = Chronologist.config.enrichers = [Chronologist::Enricher::Datadog.new]
+
+  def test_no_vendor_fields_by_default
+    stub_datadog
+    stub_otel
+    ENV["DD_SERVICE"] = "api"
+    h = parse("x")
+    refute h.key?("dd")
+    refute h.key?("trace_id")
+  end
+
+  def test_custom_enricher_and_failure_is_isolated
+    Chronologist.config.enrichers = [-> { { "a" => 1 } }, -> { raise "x" }]
+    assert_equal 1, parse("x")["a"]
+  end
+
   def test_datadog_correlation
     stub_datadog
+    dd!
     h = parse("x")
     assert_equal({ "trace_id" => "123", "span_id" => "456", "service" => "web", "env" => "prod", "version" => "1.0" }, h["dd"])
     assert_equal "web", h["service"]
@@ -135,12 +155,24 @@ class ChronologistTest < Minitest::Test
 
   def test_datadog_without_active_trace_omits_ids
     stub_datadog(trace_id: 0, span_id: 0)
+    dd!
     refute parse("x")["dd"].key?("trace_id")
   end
 
-  def test_otel_converts_to_dd_ids
+  def test_otel_fields
     stub_otel
+    Chronologist.config.enrichers = [Chronologist::Enricher::OpenTelemetry.new]
     h = parse("x")
+    assert_equal "00f067aa0ba902b7", h["span_id"]
+    refute h.key?("dd")
+  end
+
+  def test_otel_converts_to_dd_ids_and_merges_with_datadog
+    stub_otel
+    ENV["DD_SERVICE"] = "api"
+    Chronologist.config.enrichers = [Chronologist::Enricher::Datadog.new, Chronologist::Enricher::OpenTelemetry.new(datadog_ids: true)]
+    h = parse("x")
+    assert_equal "api", h["dd"]["service"]
     assert_equal "0af7651916cd43dd8448eb211c80319c", h["trace_id"]
     assert_equal "01", h["trace_flags"]
     assert_equal "8448eb211c80319c".to_i(16).to_s, h["dd"]["trace_id"]
@@ -150,6 +182,7 @@ class ChronologistTest < Minitest::Test
   def test_env_fallback_without_tracer
     ENV["DD_SERVICE"] = "api"
     ENV["DD_ENV"] = "stg"
+    dd!
     h = parse("x")
     assert_equal "api", h["service"]
     assert_equal "env:stg", h["ddtags"]

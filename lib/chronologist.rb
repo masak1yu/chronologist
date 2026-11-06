@@ -1,14 +1,13 @@
 require "json"
 require "logger"
-require_relative "chronologist/correlation"
 require_relative "chronologist/formatter"
 
 module Chronologist
   VERSION = "0.1.0"
 
-  Config = Struct.new(:format, :time_zone, :output, :correlation, :fields, :loggers, :request_summary) do
+  Config = Struct.new(:format, :time_zone, :output, :enrichers, :fields, :loggers, :request_summary) do
     def initialize(*)
-      super(:jsonl, nil, :auto, true, {}, [], false)
+      super(:jsonl, nil, :auto, [], {}, [], false)
     end
   end
 

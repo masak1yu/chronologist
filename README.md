@@ -19,9 +19,24 @@ config.chronologist.loggers = [-> { Sidekiq.logger }]
 - `output :auto`: ECS 上または `RAILS_LOG_TO_STDOUT` があれば stdout に出力
 - `Chronologist.with(user_id: 1) { ... }`: ブロック内の全行にフィールド追加
 - Rails 外: `Chronologist.logger` / `Chronologist.apply(logger)`
-- Datadog: `dd.trace_id` 等を自動付与。`DD_SERVICE` / `DD_ENV` / `DD_VERSION` から `service` `ddsource` `ddtags` も付与
-- OpenTelemetry: `trace_id` `span_id` `trace_flags` と、Datadog 連携用の `dd.trace_id` を付与
-- `correlation = false` で相関を無効化
+
+## enrichers（任意）
+
+各行に付加するフィールドを `call` → Hash のオブジェクトで登録する。既定は空で、特定ベンダーには依存しない。
+
+```ruby
+require "chronologist/enricher/datadog"
+require "chronologist/enricher/opentelemetry"
+
+config.chronologist.enrichers = [
+  Chronologist::Enricher::Datadog.new,                          # dd.trace_id 等 + DD_* から service/ddsource/ddtags
+  Chronologist::Enricher::OpenTelemetry.new(datadog_ids: true), # trace_id/span_id/trace_flags（+ Datadog 照合用 dd.*）
+  -> { { "region" => ENV["AWS_REGION"] } },                     # 自前の enricher
+]
+```
+
+- 後ろの enricher が勝つ。`dd` のようなネストは 1 段だけマージ
+- enricher の例外は握りつぶし、ログ出力は止めない
 
 ## テスト
 
